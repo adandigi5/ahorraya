@@ -28,7 +28,7 @@ aside svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#888;margin-right:7px;flex:none}
 .min .dot{margin-right:0}
 .dot.ok{background:var(--grn)}.dot.pend{background:var(--yel)}
-main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) 12px}
+main{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) 8px}
 @media(min-width:900px){body{padding:16px}.app{height:calc(100dvh - 32px);max-width:1200px;margin:auto;border:2px solid var(--ink);border-radius:30px;overflow:hidden}aside{padding-top:14px;padding-bottom:14px;padding-left:8px}main{padding:20px 22px 28px}}
 h1{font-size:clamp(20px,5.6vw,34px);font-weight:800;letter-spacing:-1px;line-height:1.15;margin:0 0 10px}
 .agent{background:var(--agent);color:#fff;border-radius:var(--r);padding:14px 16px;margin-bottom:14px;line-height:1.5;font-size:14.5px}
@@ -39,9 +39,9 @@ h1{font-size:clamp(20px,5.6vw,34px);font-weight:800;letter-spacing:-1px;line-hei
 .res>summary::before,.pd>summary::before,.imp>summary::before{content:"";width:7px;height:7px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s;flex:none}
 .res[open]>summary::before,.pd[open]>summary::before,.imp[open]>summary::before{transform:rotate(45deg)}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.card{color:#161616;position:relative;overflow:hidden;border-radius:var(--r);padding:16px;min-height:132px;min-width:0;overflow-wrap:anywhere}
+.card{container-type:inline-size;color:#161616;position:relative;overflow:hidden;border-radius:var(--r);padding:16px;min-height:132px;min-width:0;overflow-wrap:anywhere}
 .card h3{font-size:15px;font-weight:700;line-height:1.2}
-.big{font-size:26px;font-weight:800;letter-spacing:-1px;margin-top:12px;line-height:1.1}
+.big{white-space:nowrap;overflow-wrap:normal;font-size:26px;font-weight:800;letter-spacing:-1px;margin-top:12px;line-height:1.1}
 .small{font-size:12.5px;margin-top:6px;line-height:1.35;position:relative}
 .card>*{position:relative;z-index:1}
 .y{background:var(--yel)}.p{background:var(--pink)}.g{background:var(--grn)}.b{background:var(--blu)}
@@ -83,11 +83,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
  .g4>:nth-child(1){grid-area:f}.g4>:nth-child(2){grid-area:m}.g4>:nth-child(3){grid-area:d}.g4>:nth-child(4){grid-area:x}
  .row{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:8px}
  .row .x{width:44px}
- .grid{gap:6px}.card{padding:9px 8px;min-height:0;border-radius:14px}.card h3{font-size:10.5px}.big{font-size:clamp(12px,3.9vw,18px);margin-top:8px;letter-spacing:-.4px}.small{font-size:9.5px;line-height:1.25}.card::after{width:40px;height:40px;right:-10px;bottom:-10px}
+ .grid{gap:4px}.card{padding:9px 6px;min-height:0;border-radius:14px}.card h3{font-size:10.5px}.big{font-size:13px;margin-top:8px;letter-spacing:-.4px}.small{font-size:9.5px;line-height:1.25}.card::after{width:40px;height:40px;right:-10px;bottom:-10px}
  .panel{padding:12px}.mrow{grid-template-columns:54px 1fr}.mrow b{grid-column:2}
 }
-.seg{overflow-x:auto;scrollbar-width:none;display:flex;gap:4px;background:var(--soft);border-radius:999px;padding:4px;margin-bottom:10px}
-.seg button{flex:1 0 auto;min-width:0;background:transparent;color:var(--ink);padding:0 8px;font-size:12px;min-height:40px;white-space:nowrap}
+.seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--soft);border-radius:22px;padding:4px;margin-bottom:10px}
+.seg button{flex:1 1 auto;min-width:0;background:transparent;color:var(--ink);padding:0 10px;font-size:12.5px;min-height:40px;white-space:nowrap}
 .seg button small{opacity:.7;margin-left:3px;font-size:12px}
 .seg button.on{background:var(--btn);color:var(--on-btn)}
 .drop{border:2px dashed var(--ink);border-radius:18px;padding:20px;text-align:center;cursor:pointer;background:var(--dropbg);margin-bottom:12px}
@@ -102,8 +102,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .q.done{background:var(--grn)}
 .q header{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
 .q ul{list-style:none;padding:0;margin:8px 0 0;font-size:13px}
-.q li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:1px 0}
-.q li label{flex:1;flex-wrap:wrap;min-height:36px;gap:8px;min-width:0}
+.q li{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:7px 0}
+.q li+li{border-top:1px solid rgba(128,128,128,.28)}
+.q li label{flex:1;display:flex;flex-wrap:nowrap;align-items:flex-start;gap:8px;min-width:0;min-height:0}
+.q li label .sw{margin-top:6px}
+.q li .t{line-height:22px;min-width:0}
+.q li>.t{white-space:nowrap;font-weight:600}
+.q li .tag{display:inline-block;line-height:1.3;margin-left:2px}
+.q .chip{font-size:12px;padding:2px 9px}
 .q li.ok{opacity:.6}.q li.ok .t{text-decoration:line-through}
 .q label{font-weight:500;font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer}
 .q li small{color:var(--mut)}
@@ -157,7 +163,7 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
       <div class="msg" id="cmsg"></div>
       <div class="add g4">
         <label class="dt"><span class="dtv ph">Fecha de cobro</span><input id="cf" type="date" data-ph="Fecha de cobro" aria-label="Fecha de cobro"></label>
-        <input id="cm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Monto" aria-label="Monto cobrado (opcional)">
+        <input id="cm" type="text" inputmode="decimal" data-num autocomplete="off" placeholder="Monto" aria-label="Monto cobrado (opcional)">
         <input id="cd" placeholder="Concepto (opcional)" aria-label="Concepto">
         <button id="cb" type="button">Agregar</button>
       </div>
@@ -177,7 +183,7 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
       <div class="msg" id="gmsg"></div>
       <div class="add g5">
         <input id="nd" placeholder="Concepto" aria-label="Concepto">
-        <input id="nm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Monto" aria-label="Monto">
+        <input id="nm" type="text" inputmode="decimal" data-num autocomplete="off" placeholder="Monto" aria-label="Monto">
         <label class="dt"><span class="dtv ph">Fecha</span><input id="nf" type="date" data-ph="Fecha" aria-label="Fecha"></label>
         <select id="nc" aria-label="Categoría"></select>
         <button id="nb" type="button">Agregar</button>
@@ -285,6 +291,7 @@ function compute(){
 }
 function byCat(items){const m={};items.forEach(i=>{const k=i.g.cat||'';m[k]=(m[k]||0)+i.part});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 const isDone=(q,i)=>!!s.hechos[q+':'+i.id];
+const bigH=x=>`<div class="big" style="font-size:min(26px,${(100/(x.length*.58+.5)).toFixed(1)}cqw)">${x}</div>`;
 const chip=(k,v)=>{const c=catOf(k);return `<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)} ${money(v)}</span>`};
 
 /* ---------- Render ---------- */
@@ -312,10 +319,10 @@ function render(){
   const cAll=s.cobros.filter(c=>c.fecha).sort((a,b)=>a.fecha<b.fecha?-1:1),lastC=cAll[cAll.length-1];
   const apart=cD.reduce((a,x)=>a+x.part,0),inc=cur?cur.inc:0;
   $('cards').innerHTML=
-   `<div class="card y"><h3>Sueldo de la quincena</h3><div class="big">${inc>0?money(inc):'—'}</div><div class="small">${cur&&cur.pend?'Falta cargar el monto de '+cur.pend+' cobro'+(cur.pend>1?'s':''):inc>0?qLabel(now):'Sin cobro en '+qLabel(now)}</div></div>`+
-   `<div class="card p"><h3>Por cubrir</h3><div class="big">${money(cRem)}</div><div class="small">${cI.length?(cRem===0?'Todo cubierto · ':'')+'Apartado '+money(apart)+' de '+money(cur.sum):'Sin gastos en esta quincena'}</div></div>`+
-   `<div class="card g"><h3>Libre esta quincena</h3><div class="big">${libre==null?'—':money(libre)}</div><div class="small">${libre==null?'Se calcula al cargar el sueldo':libre<0?'No alcanza para lo que hay que guardar':(cur.spent>0?'Sueldo − a guardar − gastado':'Sueldo menos lo que tenés que guardar')}</div></div>`+
-   `<div class="card b"><h3>Último cobro</h3><div class="big">${lastC?fmtD(lastC.fecha):'—'}</div><div class="small">${lastC?(!nextC?'Ya pasó':nextC===lastC?'Es también el próximo cobro':'Próximo cobro: '+fmtD(nextC.fecha)):'Sin fechas de cobro'}</div></div>`;
+   `<div class="card y"><h3>Sueldo de la quincena</h3>${bigH(inc>0?money(inc):'—')}<div class="small">${cur&&cur.pend?'Falta cargar el monto':inc>0?qLabel(now):'Sin cobro'}</div></div>`+
+   `<div class="card p"><h3>Por cubrir</h3>${bigH(money(cRem))}<div class="small">${cI.length?(cRem===0?'Todo cubierto':'Apartado '+money(apart)+' de '+money(cur.sum)):'Sin gastos en esta quincena'}</div></div>`+
+   `<div class="card g"><h3>Libre esta quincena</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur.spent>0?'Sueldo − guardar − gastado':'Sueldo − a guardar')}</div></div>`+
+   `<div class="card b"><h3>Último cobro</h3>${bigH(lastC?fmtD(lastC.fecha):'—')}<div class="small">${lastC?(!nextC?'Ya pasó':nextC===lastC?'También el próximo':'Próximo: '+fmtD(nextC.fecha)):'Sin cobros'}</div></div>`;
   $('plan').innerHTML=qs.length?qs.slice(0,planAll?qs.length:8).map(x=>{
     const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=x.inc>0?x.inc-x.sum-x.spent:null,ap=dn.reduce((a,i)=>a+i.part,0);
     return `<div class="q ${x.q===now?'now':''} ${all?'done':''}"><header><span>${qLabel(x.q)} ${x.q===now?'<span class="tag">ahora</span>':''}${x.inc||x.pend?'<span class="tag">cobro</span>':''}</span><span>${money(x.sum)}</span></header>
@@ -325,14 +332,14 @@ function render(){
     ${x.sum>0?`<div class="small">Apartado ${money(ap)} de ${money(x.sum)}</div><label style="margin-top:8px"><input type="checkbox" data-qa="${x.q}" ${all?'checked':''}> Marcar todo como apartado</label>`:''}</div>`}).join('')+(qs.length>8?`<button class="ghost" data-all="1">${planAll?'Mostrar menos':'Ver todas las quincenas ('+qs.length+')'}</button>`:'')
     :'<div class="empty">No hay quincenas para planificar. Cargá gastos con fecha y monto.</div>';
   const cs=[...s.cobros].sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
-  $('clist').innerHTML=cs.length?cs.map(c=>`<div class="row g4"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="number" inputmode="decimal" step="0.01" min="0" value="${c.monto>0?c.monto:''}" placeholder="Monto al cobrar" aria-label="Monto"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin fechas de cobro. Agregalas arriba o importalas desde un archivo.</div>';
+  $('clist').innerHTML=cs.length?cs.map(c=>`<div class="row g4"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto al cobrar" aria-label="Monto"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin fechas de cobro. Agregalas arriba o importalas desde un archivo.</div>';
   $('cats').innerHTML=s.cats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dc="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   const sel=$('nc').value;$('nc').innerHTML=catOpts(sel);
   const gl=s.gastos.filter(g=>g.tipo===GT);
   $('gseg').innerHTML=Object.keys(GTL).map(k=>`<button data-gt="${k}" class="${k===GT?'on':''}">${GTL[k]} <small>${s.gastos.filter(g=>g.tipo===k).length}</small></button>`).join('');
   $('ghelp').textContent=HELP[GT];
   $('glist-total').textContent=gl.length?(GT==='recurrente'?'Total por mes: ':GT==='actual'?'Total gastado: ':'Total por pagar: ')+money(gl.reduce((a,g)=>a+(g.monto>0?g.monto:0),0)):'';
-  $('list').innerHTML=gl.length?gl.map(g=>`<div class="row g5"><input data-t="g" data-id="${esc(g.id)}" data-k="desc" value="${esc(g.desc)}" aria-label="Concepto"><input data-t="g" data-id="${esc(g.id)}" data-k="monto" type="number" inputmode="decimal" step="0.01" value="${g.monto}" aria-label="Monto"><label class="dt"><span class="dtv${g.fecha?'':' ph'}">${g.fecha?fmtD(g.fecha):'Fecha'}</span><input data-t="g" data-id="${esc(g.id)}" data-k="fecha" type="date" value="${esc(g.fecha||'')}" aria-label="Fecha"></label><select data-t="g" data-id="${esc(g.id)}" data-k="cat" aria-label="Categoría">${catOpts(g.cat)}</select><button class="x" data-del="g" data-id="${esc(g.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin gastos en esta sección. Agregá el primero arriba.</div>';
+  $('list').innerHTML=gl.length?gl.map(g=>`<div class="row g5"><input data-t="g" data-id="${esc(g.id)}" data-k="desc" value="${esc(g.desc)}" aria-label="Concepto"><input data-t="g" data-id="${esc(g.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(g.monto)}" aria-label="Monto"><label class="dt"><span class="dtv${g.fecha?'':' ph'}">${g.fecha?fmtD(g.fecha):'Fecha'}</span><input data-t="g" data-id="${esc(g.id)}" data-k="fecha" type="date" value="${esc(g.fecha||'')}" aria-label="Fecha"></label><select data-t="g" data-id="${esc(g.id)}" data-k="cat" aria-label="Categoría">${catOpts(g.cat)}</select><button class="x" data-del="g" data-id="${esc(g.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin gastos en esta sección. Agregá el primero arriba.</div>';
   renderStats(cur);refreshDT();
 }
 function renderStats(cur){
@@ -359,6 +366,21 @@ function renderStats(cur){
     return `<div class="catcard" style="border-left-color:${c.color}"><b>${esc(c.name)}</b><div class="big" style="font-size:22px;margin-top:6px">${money(b.sum)}</div><div class="small">${b.n} gasto${b.n>1?'s':''} · ${Math.round(b.sum/tot*100)}% del total</div><div class="small">Promedio: ${money(b.sum/b.n)}${b.next?' · próximo: '+fmtD(b.next):''}</div><div class="small">A guardar esta quincena: <b>${money(curBy[b.k]||0)}</b></div></div>`}).join('')+'</div>';
   el.innerHTML=out;
 }
+function fmtNum(v){
+  v=String(v).replace(/[^\d,]/g,'');const i=v.indexOf(',');
+  let ent=i<0?v:v.slice(0,i),dec=i<0?null:v.slice(i+1).replace(/,/g,'').slice(0,2);
+  ent=ent.replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return dec==null?ent:ent+','+dec;
+}
+const parseNum=v=>parseFloat(String(v).replace(/\./g,'').replace(',','.'))||0;
+const fnum=n=>n>0?fmtNum(String(n).replace('.',',')):'';
+document.addEventListener('input',e=>{
+  const t=e.target;if(t.dataset.num==null)return;
+  const pos=t.selectionStart,old=t.value,cnt=old.slice(0,pos).replace(/[^\d,]/g,'').length;
+  t.value=fmtNum(old);
+  let n=0,np=0;for(;np<t.value.length&&n<cnt;np++){if(/[\d,]/.test(t.value[np]))n++}
+  try{t.setSelectionRange(np,np)}catch(_){}
+});
 function refreshDT(){document.querySelectorAll('.dt').forEach(l=>{const i=l.querySelector('input'),sp=l.querySelector('.dtv');sp.textContent=i.value?fmtD(i.value):(i.dataset.ph||'Fecha');sp.classList.toggle('ph',!i.value)})}
 document.addEventListener('input',e=>{if(e.target.type==='date')refreshDT()});
 document.addEventListener('click',e=>{const i=e.target.closest('.dt input');if(i&&i.showPicker){try{i.showPicker()}catch(_){}}});
@@ -376,7 +398,7 @@ document.addEventListener('change',e=>{
   else if(t.dataset.qa){const x=compute().qs.find(x=>x.q===+t.dataset.qa);
     if(x){x.items.forEach(i=>{const k=x.q+':'+i.id;if(t.checked)s.hechos[k]=true;else delete s.hechos[k]});save();render()}}
   else if(t.dataset.k){const o=find(t.dataset.t,t.dataset.id);if(!o)return;
-    o[t.dataset.k]=t.dataset.k==='monto'?(parseFloat(t.value)||0):t.value;save();render()}
+    o[t.dataset.k]=t.dataset.k==='monto'?parseNum(t.value):t.value;save();render()}
 });
 document.addEventListener('click',e=>{
   const d=e.target.closest('[data-del]');
@@ -395,7 +417,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('aside a,.drop')){e.preventDefault();e.target.click()}});
 $('nb').onclick=()=>{
-  const d=$('nd').value.trim(),m=parseFloat($('nm').value);let f=$('nf').value;
+  const d=$('nd').value.trim(),m=parseNum($('nm').value);let f=$('nf').value;
   if(!f&&GT==='actual')f=ymd(new Date());
   if(!d||!(m>0)||!f){$('gmsg').textContent='Completá concepto, monto y fecha para agregar el gasto.';return}
   s.gastos.push({id:uid(),desc:d,monto:m,fecha:f,cat:$('nc').value,tipo:GT,rec:GT==='recurrente'});
@@ -406,7 +428,7 @@ $('cab').onclick=()=>{
   s.cats.push({id:'c'+uid(),name:n,color:PAL[s.cats.length%PAL.length]});$('cn').value='';$('gmsg').textContent='';save();render()};
 $('cb').onclick=()=>{
   const f=$('cf').value;if(!f){$('cmsg').textContent='Elegí la fecha de cobro.';return}
-  s.cobros.push({id:uid(),fecha:f,monto:parseFloat($('cm').value)||0,desc:$('cd').value.trim()});
+  s.cobros.push({id:uid(),fecha:f,monto:parseNum($('cm').value),desc:$('cd').value.trim()});
   $('cf').value=$('cm').value=$('cd').value='';$('cmsg').textContent='';save();render()};
 
 /* ---------- Importar fechas de cobro (PDF, imagen o texto) ---------- */
