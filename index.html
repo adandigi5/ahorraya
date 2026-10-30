@@ -399,14 +399,16 @@ function render(){
     if(!C.hasCobros)ag+=' Cargá tus ingresos para planificar por cobro.';
   }
   $('agent').innerHTML=ag;$('agent').classList.toggle('hide',!showMsg||CV==='cfg');
-  const libre=cur&&cur.inc>0?cur.inc-cur.sum-cur.spent:null;
+  const hoyS=ymd(new Date()),vs=sal().filter(c=>c.fecha&&c.fecha<=hoyS),vd=vs.length?vs.map(c=>c.fecha).sort().pop():null;
+  const vigInc=vs.filter(c=>c.fecha===vd).reduce((a,c)=>a+(c.monto>0?c.monto:0),0);
+  const libre=vigInc>0?vigInc-(cur?cur.sum:0)-(cur?cur.spent:0):null;
   const cI=cur?cur.items:[],cD=cI.filter(x=>isDone(now,x)),cRem=cI.filter(x=>!isDone(now,x)).reduce((a,x)=>a+x.part,0);
   const cAll=sal().filter(c=>c.fecha).sort((a,b)=>a.fecha<b.fecha?-1:1),lastC=cAll[cAll.length-1];
   const apart=cD.reduce((a,x)=>a+x.part,0),inc=cur?cur.inc:0;
   $('cards').innerHTML=
-   `<div class="card y"><h3>Sueldo</h3>${bigH(inc>0?money(inc):'—')}<div class="small">${cur&&cur.pend?'Falta cargar el monto':inc>0?qLabel(now):'Sin cobro'}</div></div>`+
+   `<div class="card y"><h3>Sueldo</h3>${bigH(vigInc>0?money(vigInc):'—')}<div class="small">${vd?(vigInc>0?'Desde '+fmtD(vd):'Falta cargar el monto'):'Sin cobro'}</div></div>`+
    `<div class="card p"><h3>Por cubrir</h3>${bigH(money(cRem))}<div class="small">${cI.length?(cRem===0?'Todo cubierto':'Apartado '+money(apart)+' de '+money(cur.sum)):'Sin gastos en esta quincena'}</div></div>`+
-   `<div class="card g"><h3>Libre</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur.spent>0?'Sueldo − guardar − gastado':'Sueldo − a guardar')}</div></div>`+
+   `<div class="card g"><h3>Libre</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur&&cur.spent>0?'Sueldo − guardar − gastado':'Sueldo − a guardar')}</div></div>`+
    `<div class="card b"><h3>Último cobro</h3>${bigH(lastC?fmtD(lastC.fecha):'—')}<div class="small">${lastC?(!nextC?'Ya pasó':nextC===lastC?'También el próximo':'Próximo: '+fmtD(nextC.fecha)):'Sin cobros'}</div></div>`;
   $('plan').innerHTML=[0,1,2].map(i=>qs.find(x=>x.q===now+i)||{q:now+i,items:[],sum:0,inc:0,pend:0,spent:0}).map(x=>{
     const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=x.inc>0?x.inc-x.sum-x.spent:null,ap=dn.reduce((a,i)=>a+i.part,0);
