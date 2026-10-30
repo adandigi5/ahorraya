@@ -269,6 +269,7 @@ function compute(){
   Cq.forEach(get);
   s.cobros.forEach(c=>{if(!c.fecha)return;const q=qOf(parseD(c.fecha));if(q<now)return;
     if(c.monto>0)get(q).inc+=c.monto;else get(q).pend++});
+  const todayS=ymd(new Date()),fut=s.cobros.filter(c=>c.fecha&&c.fecha>=todayS).map(c=>c.fecha).sort();
   let total=0,pend=0;
   s.gastos.forEach(g=>{
     if(!g.fecha||!(g.monto>0))return;
@@ -278,6 +279,11 @@ function compute(){
       const due=qOf(parseD(o.fecha));
       if(g.rec&&due<now)return;
       total+=g.monto;
+      if(fut.length){
+        let q=now;
+        if(o.fecha>todayS){const bf=fut.filter(f=>f<o.fecha);if(bf.length)q=Math.max(now,qOf(parseD(bf[bf.length-1])))}
+        const m=get(q);m.items.push({id:o.id,g,fecha:o.fecha,part:g.monto,late:due<=now,nc:due>now&&q===now});m.sum+=g.monto;return;
+      }
       const st=o.prev?Math.max(now,qOf(o.prev)):now,range=[];
       if(due<=now)range.push(now);else for(let q=st;q<due;q++)range.push(q);
       if(!range.length)range.push(now);
@@ -304,7 +310,7 @@ function render(){
   const C=compute(),{now,qs,total,pend}=C;
   const cur=qs.find(x=>x.q===now);
   const nextC=s.cobros.filter(c=>c.fecha&&c.fecha>=ymd(new Date())).sort((a,b)=>a.fecha<b.fecha?-1:1)[0];
-  const nxt=qs.find(x=>x.q>now&&x.sum>0);
+  const nxt=qs.find(x=>x.q>now&&x.q<=now+2&&x.sum>0);
   let ag;
   if(!pend)ag='Todavía no cargaste gastos. Agregalos en la pestaña Gastos, con su categoría y fecha de pago.';
   else{
@@ -323,14 +329,14 @@ function render(){
    `<div class="card p"><h3>Por cubrir</h3>${bigH(money(cRem))}<div class="small">${cI.length?(cRem===0?'Todo cubierto':'Apartado '+money(apart)+' de '+money(cur.sum)):'Sin gastos en esta quincena'}</div></div>`+
    `<div class="card g"><h3>Libre esta quincena</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur.spent>0?'Sueldo − guardar − gastado':'Sueldo − a guardar')}</div></div>`+
    `<div class="card b"><h3>Último cobro</h3>${bigH(lastC?fmtD(lastC.fecha):'—')}<div class="small">${lastC?(!nextC?'Ya pasó':nextC===lastC?'También el próximo':'Próximo: '+fmtD(nextC.fecha)):'Sin cobros'}</div></div>`;
-  $('plan').innerHTML=qs.length?qs.slice(0,planAll?qs.length:8).map(x=>{
+  $('plan').innerHTML=[0,1,2].map(i=>qs.find(x=>x.q===now+i)||{q:now+i,items:[],sum:0,inc:0,pend:0,spent:0}).map(x=>{
     const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=x.inc>0?x.inc-x.sum-x.spent:null,ap=dn.reduce((a,i)=>a+i.part,0);
     return `<div class="q ${x.q===now?'now':''} ${all?'done':''}"><header><span>${qLabel(x.q)} ${x.q===now?'<span class="tag">ahora</span>':''}${x.inc||x.pend?'<span class="tag">cobro</span>':''}</span><span>${money(x.sum)}</span></header>
+    ${!x.items.length?'<div class="small">Nada para apartar en esta quincena.</div>':''}
     ${x.sum>0?`<div class="chips" style="margin:8px 0 0">${byCat(x.items).map(([k,v])=>chip(k,v)).join('')}</div>`:''}
     <ul>${x.items.map(i=>{const k=x.q+':'+i.id,ok=!!s.hechos[k];return `<li class="${ok?'ok':''}"><label><input type="checkbox" data-qi="${esc(k)}" ${ok?'checked':''} aria-label="Apartado: ${esc(i.g.desc)}"><i class="sw" style="background:${catOf(i.g.cat).color}"></i><span class="t">${esc(i.g.desc)} <small>vence ${fmtD(i.fecha)}</small>${i.g.rec?' <span class="tag">mensual</span>':''}${i.late?' <span class="tag">vence ya</span>':''}${i.nc?' <span class="tag">sin cobro previo</span>':''}</span></label><span class="t">${money(i.part)}</span></li>`}).join('')}</ul>
     ${x.spent>0?`<div class="small">Ya gastado: ${money(x.spent)}</div>`:''}${x.inc>0?`<div class="small">Cobro ${money(x.inc)} − a guardar ${money(x.sum)}${x.spent>0?' − gastado '+money(x.spent):''} = <b>${lib<0?'faltan '+money(-lib):'libre '+money(lib)}</b></div>`:x.pend?'<div class="small">Cobro sin monto todavía: cargalo en Cobros.</div>':''}
-    ${x.sum>0?`<div class="small">Apartado ${money(ap)} de ${money(x.sum)}</div><label style="margin-top:8px"><input type="checkbox" data-qa="${x.q}" ${all?'checked':''}> Marcar todo como apartado</label>`:''}</div>`}).join('')+(qs.length>8?`<button class="ghost" data-all="1">${planAll?'Mostrar menos':'Ver todas las quincenas ('+qs.length+')'}</button>`:'')
-    :'<div class="empty">No hay quincenas para planificar. Cargá gastos con fecha y monto.</div>';
+    ${x.sum>0?`<div class="small">Apartado ${money(ap)} de ${money(x.sum)}</div><label style="margin-top:8px"><input type="checkbox" data-qa="${x.q}" ${all?'checked':''}> Marcar todo como apartado</label>`:''}</div>`}).join('');
   const cs=[...s.cobros].sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
   $('clist').innerHTML=cs.length?cs.map(c=>`<div class="row g4"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto al cobrar" aria-label="Monto"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin fechas de cobro. Agregalas arriba o importalas desde un archivo.</div>';
   $('cats').innerHTML=s.cats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dc="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
@@ -405,7 +411,6 @@ document.addEventListener('click',e=>{
   if(d){const a=d.dataset.del==='c'?s.cobros:s.gastos,i=a.findIndex(x=>String(x.id)===d.dataset.id);if(i>-1)a.splice(i,1);save();render()}
   const rc=e.target.closest('[data-rec]');
   if(rc){const g=s.gastos.find(x=>String(x.id)===rc.dataset.rec);if(g){g.rec=!g.rec;save();render()}}
-  if(e.target.closest('[data-all]')){planAll=!planAll;render()}
   const gt=e.target.closest('[data-gt]');
   if(gt){GT=gt.dataset.gt;render()}
   const sfb=e.target.closest('[data-sf]');
