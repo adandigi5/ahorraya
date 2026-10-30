@@ -173,7 +173,7 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
     <section class="panel" id="vPlan"><details class="pd" id="pd" open><summary>A guardar</summary><div id="plan" style="margin-top:6px"></div></details></section>
 
     <section class="panel hide" id="vCobros">
-      <p class="msg">Fechas en que cobrás. Al cobrar, cargá el monto.</p>
+      <p class="msg">Fechas en que cobrás. Al cobrar, cargá el monto. Solo la categoría Sueldo cuenta para el plan.</p>
       <div class="msg" id="cmsg"></div>
       <div class="add g5">
         <input id="cd" placeholder="Concepto (opcional)" aria-label="Concepto">
@@ -257,10 +257,12 @@ const catOf=id=>s.cats.find(c=>c.id===id)||{id:'',name:'Sin categoría',color:'#
 const catOpts=sel=>'<option value="">Sin categoría</option>'+s.cats.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join('');
 
 /* ---------- Quincenas ---------- */
+const isSal=c=>{const k=s.icats.find(x=>x.id===c.cat);return !!k&&(k.id==='i1'||k.name.trim().toLowerCase()==='sueldo')};
+const sal=()=>s.cobros.filter(isSal);
 let CY=null;
 function cyc(){
   if(CY)return CY;
-  const ds=[...new Set(s.cobros.map(c=>c.fecha).filter(Boolean))].sort(),T=ymd(new Date());
+  const ds=[...new Set(sal().map(c=>c.fecha).filter(Boolean))].sort(),T=ymd(new Date());
   let lo=T,hi=horizon();
   s.gastos.forEach(g=>{if(g.fecha){if(g.fecha<lo)lo=g.fecha;if(!g.rec&&g.fecha>hi)hi=g.fecha}});
   ds.forEach(f=>{if(f<lo)lo=f;if(f>hi)hi=f});
@@ -298,7 +300,7 @@ function qLabel(q){
 }
 function parseD(str){const [y,m,d]=str.split('-').map(Number);return new Date(y,m-1,d)}
 function horizon(){
-  const l=s.cobros.map(c=>c.fecha).filter(Boolean).sort().pop(),h=new Date();h.setMonth(h.getMonth()+12);
+  const l=sal().map(c=>c.fecha).filter(Boolean).sort().pop(),h=new Date();h.setMonth(h.getMonth()+12);
   const a=ymd(h);return l&&l>a?l:a;
 }
 function monthDate(y,m,d){const last=new Date(y,m+1,0).getDate();return new Date(y,m,Math.min(d,last))}
@@ -327,12 +329,12 @@ function occs(g){
 }
 function compute(){
   const now=qOf(new Date()),map={};
-  const Cq=new Set(s.cobros.filter(c=>c.fecha).map(c=>qOf(parseD(c.fecha))).filter(q=>q>=now));
+  const Cq=new Set(sal().filter(c=>c.fecha).map(c=>qOf(parseD(c.fecha))).filter(q=>q>=now));
   const get=q=>map[q]=map[q]||{q,items:[],sum:0,inc:0,pend:0,spent:0};
   Cq.forEach(get);
-  s.cobros.forEach(c=>{if(!c.fecha)return;const q=qOf(parseD(c.fecha));if(q<now)return;
+  sal().forEach(c=>{if(!c.fecha)return;const q=qOf(parseD(c.fecha));if(q<now)return;
     if(c.monto>0)get(q).inc+=c.monto;else get(q).pend++});
-  const todayS=ymd(new Date()),fut=s.cobros.filter(c=>c.fecha&&c.fecha>=todayS).map(c=>c.fecha).sort();
+  const todayS=ymd(new Date()),fut=sal().filter(c=>c.fecha&&c.fecha>=todayS).map(c=>c.fecha).sort();
   let total=0,pend=0;
   s.gastos.forEach(g=>{
     if(!g.fecha||!(g.monto>0))return;
@@ -386,7 +388,7 @@ function render(){
   CY=null;
   const C=compute(),{now,qs,total,pend}=C;
   const cur=qs.find(x=>x.q===now);
-  const nextC=s.cobros.filter(c=>c.fecha&&c.fecha>=ymd(new Date())).sort((a,b)=>a.fecha<b.fecha?-1:1)[0];
+  const nextC=sal().filter(c=>c.fecha&&c.fecha>=ymd(new Date())).sort((a,b)=>a.fecha<b.fecha?-1:1)[0];
   const nxt=qs.find(x=>x.q>now&&x.q<=now+2&&x.sum>0);
   let ag;
   if(!pend)ag='Sin gastos todavía. Cargalos en Gastos.';
@@ -399,7 +401,7 @@ function render(){
   $('agent').innerHTML=ag;$('agent').classList.toggle('hide',!showMsg||CV==='cfg');
   const libre=cur&&cur.inc>0?cur.inc-cur.sum-cur.spent:null;
   const cI=cur?cur.items:[],cD=cI.filter(x=>isDone(now,x)),cRem=cI.filter(x=>!isDone(now,x)).reduce((a,x)=>a+x.part,0);
-  const cAll=s.cobros.filter(c=>c.fecha).sort((a,b)=>a.fecha<b.fecha?-1:1),lastC=cAll[cAll.length-1];
+  const cAll=sal().filter(c=>c.fecha).sort((a,b)=>a.fecha<b.fecha?-1:1),lastC=cAll[cAll.length-1];
   const apart=cD.reduce((a,x)=>a+x.part,0),inc=cur?cur.inc:0;
   $('cards').innerHTML=
    `<div class="card y"><h3>Sueldo</h3>${bigH(inc>0?money(inc):'—')}<div class="small">${cur&&cur.pend?'Falta cargar el monto':inc>0?qLabel(now):'Sin cobro'}</div></div>`+
@@ -417,7 +419,7 @@ function render(){
   $('ctools').innerHTML=toolsHtml('c',cs);
   $('clist').innerHTML=cs.length?(SELM.c?cs.map(x=>selRow(x,'c')).join(''):cs.map(c=>`<div class="row g5"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto" aria-label="Monto"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><select data-t="c" data-id="${esc(c.id)}" data-k="cat" aria-label="Categoría">${icatOpts(c.cat)}</select><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join('')):'<div class="empty">Sin ingresos todavía.</div>';
   $('icats').innerHTML=s.icats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dic="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
-  {const sc=$('ccat').value;$('ccat').innerHTML=icatOpts(sc)}
+  {const sc=$('ccat').options.length?$('ccat').value:'i1';$('ccat').innerHTML=icatOpts(sc)}
   $('cats').innerHTML=s.cats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dc="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   const sel=$('nc').value;$('nc').innerHTML=catOpts(sel);
   const gl=s.gastos.filter(g=>g.tipo===GT).sort(byDate(ORD.g));
@@ -524,7 +526,9 @@ document.addEventListener('click',e=>{
   const svb=e.target.closest('[data-sv]');
   if(svb){SV=svb.dataset.sv;SSEL=null;render()}
   const dic=e.target.closest('[data-dic]');
-  if(dic){s.icats=s.icats.filter(c=>c.id!==dic.dataset.dic);s.cobros.forEach(c=>{if(c.cat===dic.dataset.dic)c.cat=''});save();render()}
+  if(dic){const c0=s.icats.find(c=>c.id===dic.dataset.dic);
+    if(c0&&(c0.id==='i1'||c0.name.trim().toLowerCase()==='sueldo'))$('cmsg').textContent='La categoría Sueldo no se puede borrar.';
+    else{s.icats=s.icats.filter(c=>c.id!==dic.dataset.dic);s.cobros.forEach(c=>{if(c.cat===dic.dataset.dic)c.cat=''});save();render()}}
   const sfb=e.target.closest('[data-sf]');
   if(sfb){STF=sfb.dataset.sf;render()}
   const dc=e.target.closest('[data-dc]');
@@ -591,7 +595,7 @@ function parseCobros(lines){
       if(am.length){const a=am[am.length-1];monto=num(a[0]);rest=rest.slice(0,a.index)+' '+rest.slice(a.index+a[0].length)}
       desc=rest.replace(/[$]/g,'').replace(/\s+/g,' ').replace(/^[\s\-–:|,]+|[\s\-–:|,]+$/g,'');
     }
-    ds.forEach(f=>out.push({id:uid(),fecha:f,monto,desc}));
+    ds.forEach(f=>out.push({id:uid(),fecha:f,monto,desc,cat:'i1'}));
   });
   return out;
 }
