@@ -142,6 +142,16 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
 .cloudbox small{color:var(--mut);font-size:12.5px;line-height:1.3}.cloudbox .msg{margin:0}
 .sync:focus-visible{outline:3px solid var(--blu);outline-offset:-3px}
 .sh{font-size:16px;font-weight:700;letter-spacing:-.2px;margin:18px 0 8px}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 10px}
+.tbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;font-size:13px;border-radius:999px;background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.tbtn.on{background:var(--btn);color:var(--on-btn);border-color:var(--btn)}
+.tbtn:disabled{opacity:.45;cursor:default}
+.bulk{display:flex;gap:8px;width:100%}.bulk select{flex:1}
+.pair{display:grid;grid-template-columns:1fr;gap:8px;min-width:0}.pair.two{grid-template-columns:1fr 1fr}
+.selrow{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"k d m" "k f c";gap:2px 10px;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.selrow input{grid-area:k}.sd{grid-area:d;font-weight:600;min-width:0;overflow-wrap:anywhere}.sm{grid-area:m;font-weight:700;white-space:nowrap}
+.sf{grid-area:f;color:var(--mut);font-size:12.5px}.selrow .chip{grid-area:c;justify-self:end;padding:2px 9px;font-size:12px}
 </style>
 </head>
 <body>
@@ -172,6 +182,7 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
         <select id="ccat" aria-label="Categoría"></select>
         <button id="cb" type="button">Agregar</button>
       </div>
+      <div class="tools" id="ctools"></div>
       <div id="clist"></div>
       <details class="imp"><summary>Categorías</summary>
         <div class="chips" id="icats"></div>
@@ -179,6 +190,8 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
       </details>
       <details class="imp"><summary>Importar fechas</summary>
         <p class="msg">Detecto fechas y montos en PDF, imagen o texto.</p>
+        <label class="msg" for="impfmt" style="display:block;margin-bottom:4px">Formato de las fechas</label>
+        <select id="impfmt" aria-label="Formato de las fechas" style="margin-bottom:10px"><option value="dmy">dd/mm/aaaa o aa</option><option value="mdy">mm/dd/aaaa o aa</option></select>
         <div class="drop" id="drop" tabindex="0" role="button"><b>Subir PDF o imagen</b><span>o arrastrá el archivo</span></div>
         <input type="file" id="file" accept="application/pdf,image/*,text/plain,.txt,.csv" class="hide">
         <textarea id="ptxt" rows="4" placeholder="O pegá el texto con las fechas"></textarea>
@@ -194,10 +207,11 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
         <input id="nd" placeholder="Concepto" aria-label="Concepto">
         <input id="nm" type="text" inputmode="decimal" data-num autocomplete="off" placeholder="Monto" aria-label="Monto">
         <label class="dt"><span class="dtv ph">Fecha</span><input id="nf" type="date" data-ph="Fecha" aria-label="Fecha"></label>
-        <select id="nc" aria-label="Categoría"></select>
+        <div class="pair" id="ncw"><select id="nc" aria-label="Categoría"></select><select id="nfq" aria-label="Frecuencia" class="hide"><option value="mensual">Mensual</option><option value="quincenal">Quincenal</option></select></div>
         <button id="nb" type="button">Agregar</button>
       </div>
       <div id="glist-total" class="msg"></div>
+      <div class="tools" id="gtools"></div>
       <div id="list"></div>
       <details class="imp"><summary>Categorías</summary>
         <div class="chips" id="cats"></div>
@@ -243,10 +257,45 @@ const catOf=id=>s.cats.find(c=>c.id===id)||{id:'',name:'Sin categoría',color:'#
 const catOpts=sel=>'<option value="">Sin categoría</option>'+s.cats.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join('');
 
 /* ---------- Quincenas ---------- */
-const qOf=d=>d.getFullYear()*24+d.getMonth()*2+(d.getDate()>15?1:0);
-function qLabel(q){const y=Math.floor(q/24),m=Math.floor((q%24)/2),h=q%2;
-  const last=new Date(y,m+1,0).getDate();
-  return (h?'16–'+last:'1–15')+' '+MES[m]+(y!==new Date().getFullYear()?' '+y:'')}
+let CY=null;
+function cyc(){
+  if(CY)return CY;
+  const ds=[...new Set(s.cobros.map(c=>c.fecha).filter(Boolean))].sort(),T=ymd(new Date());
+  let lo=T,hi=horizon();
+  s.gastos.forEach(g=>{if(g.fecha){if(g.fecha<lo)lo=g.fecha;if(!g.rec&&g.fecha>hi)hi=g.fecha}});
+  ds.forEach(f=>{if(f<lo)lo=f;if(f>hi)hi=f});
+  const add=(f,n)=>{const d=parseD(f);d.setDate(d.getDate()+n);return ymd(d)},st=[];
+  if(ds.length){
+    let step=15;
+    if(ds.length>1){const g=[];for(let i=1;i<ds.length;i++)g.push(Math.round((parseD(ds[i])-parseD(ds[i-1]))/864e5));g.sort((x,y)=>x-y);step=Math.max(1,g[g.length>>1])}
+    let b=ds[0];const back=[];
+    for(let n=0;b>lo&&n<3000;n++){b=add(b,-step);back.push(b)}
+    st.push(...back.reverse(),...ds);
+    let e=ds[ds.length-1];
+    for(let n=0;e<hi&&n<3000;n++){e=add(e,step);st.push(e)}
+    st.push(add(e,step));
+  }else{
+    const a=parseD(lo),z=parseD(hi);let y=a.getFullYear(),m=a.getMonth();
+    for(let n=0;n<600;n++){
+      st.push(ymd(new Date(y,m,1)),ymd(new Date(y,m,16)));
+      if(y===z.getFullYear()&&m===z.getMonth()){if(++m>11){m=0;y++}st.push(ymd(new Date(y,m,1)));break}
+      if(++m>11){m=0;y++}
+    }
+  }
+  CY={st};return CY;
+}
+function qOf(d){
+  const f=typeof d==='string'?d:ymd(d),st=cyc().st;
+  if(f<st[0])return 0;
+  let a=0,b=st.length-1;
+  while(a<b){const mid=(a+b+1)>>1;if(st[mid]<=f)a=mid;else b=mid-1}
+  return a;
+}
+function qLabel(q){
+  const st=cyc().st,a=parseD(st[q]),e=parseD(st[q+1]||st[q]);e.setDate(e.getDate()-1);
+  const cy=new Date().getFullYear(),f=d=>d.getDate()+' '+MES[d.getMonth()];
+  return f(a)+' – '+f(e)+((a.getFullYear()!==cy||e.getFullYear()!==cy)?' '+e.getFullYear():'');
+}
 function parseD(str){const [y,m,d]=str.split('-').map(Number);return new Date(y,m-1,d)}
 function horizon(){
   const l=s.cobros.map(c=>c.fecha).filter(Boolean).sort().pop(),h=new Date();h.setMonth(h.getMonth()+12);
@@ -257,6 +306,17 @@ function occs(g){
   if(!g.fecha)return [];
   if(!g.rec)return [{id:String(g.id),fecha:g.fecha,prev:null}];
   const b=parseD(g.fecha),h=parseD(horizon()),out=[];
+  if(g.freq==='quincenal'){
+    const off=b.getDate()-(b.getDate()>15?16:1);
+    let y=b.getFullYear(),m=b.getMonth(),half=b.getDate()>15?1:0,prev=null;
+    for(let i=0;i<1500;i++){
+      const last=new Date(y,m+1,0).getDate(),day=Math.min((half?16:1)+off,half?last:15),d=new Date(y,m,day);
+      if(d>h)break;
+      out.push({id:i?g.id+'@'+ymd(d):String(g.id),fecha:ymd(d),prev});
+      prev=d;if(half){half=0;if(++m>11){m=0;y++}}else half=1;
+    }
+    return out;
+  }
   let y=b.getFullYear(),m=b.getMonth(),prev=monthDate(y,m-1,b.getDate());
   for(let i=0;i<600;i++){
     const d=monthDate(y,m,b.getDate());if(d>h)break;
@@ -299,17 +359,31 @@ function compute(){
   return {now,qs,total,pend,hasCobros:Cq.size>0};
 }
 function byCat(items){const m={};items.forEach(i=>{const k=i.g.cat||'';m[k]=(m[k]||0)+i.part});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
-const isDone=(q,i)=>!!s.hechos[q+':'+i.id];
+const hkey=(q,i)=>cyc().st[q]+':'+i.id;
+const isDone=(q,i)=>!!s.hechos[hkey(q,i)];
 const bigH=x=>`<div class="big" style="font-size:min(22px,${(100/(x.length*.58+.5)).toFixed(1)}cqw)">${x}</div>`;
 const chip=(k,v)=>{const c=catOf(k);return `<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)} ${money(v)}</span>`};
 
 /* ---------- Render ---------- */
+let ORD={g:'asc',c:'asc'};
+try{ORD.g=localStorage.getItem('orden-g')==='desc'?'desc':'asc';ORD.c=localStorage.getItem('orden-c')==='desc'?'desc':'asc'}catch(e){}
+let SELM={g:false,c:false};const SELS={g:new Set(),c:new Set()};
+const byDate=dir=>(a,b)=>{const x=a.fecha||'',y=b.fecha||'';if(x===y)return 0;if(!x)return 1;if(!y)return -1;return (x<y?-1:1)*(dir==='asc'?1:-1)};
+const arrowSvg=d=>`<svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${d==='asc'?'<path d="M12 19V5M5 12l7-7 7 7"/>':'<path d="M12 5v14M5 12l7 7 7-7"/>'}</svg>`;
+function toolsHtml(k,list){
+  const n=SELS[k].size,asc=ORD[k]==='asc',bs=($('bulk-'+k)||{}).value||'';
+  if(!SELM[k])return `<button class="tbtn" data-sort="${k}" title="${asc?'Más antiguos primero':'Más recientes primero'}" aria-label="Orden por fecha: ${asc?'más antiguos primero':'más recientes primero'}. Tocar para invertir">${arrowSvg(ORD[k])}<span>Fecha</span></button><button class="tbtn" data-selm="${k}">Seleccionar</button>`;
+  const all=list.length>0&&list.every(x=>SELS[k].has(String(x.id)));
+  return `<button class="tbtn on" data-seld="${k}">Listo</button><button class="tbtn" data-sela="${k}">${all?'Ninguno':'Todos'}</button><span class="msg" style="margin:0">${n} seleccionado${n===1?'':'s'}</span><div class="bulk"><select id="bulk-${k}" aria-label="Nueva categoría">${(k==='g'?catOpts:icatOpts)(bs)}</select><button class="tbtn on" data-bulk="${k}"${n?'':' disabled'}>Aplicar</button></div>`;
+}
+const selRow=(x,k)=>{const c=(k==='g'?catOf:icatOf)(x.cat);return `<label class="selrow"><input type="checkbox" data-sel="${k}" data-id="${esc(x.id)}" ${SELS[k].has(String(x.id))?'checked':''} aria-label="Seleccionar ${esc(x.desc||'registro')}"><span class="sd">${esc(x.desc||'Sin concepto')}</span><span class="sm">${money(x.monto)}</span><span class="sf">${x.fecha?fmtD(x.fecha):'—'}</span><span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}</span></label>`};
 let GT='futuro',STF='todos',showMsg=true,SV='q',SSEL=null,CV='plan';
 try{showMsg=localStorage.getItem('ver-msg')!=='0'}catch(e){}
 const VN={plan:'Plan',cobros:'Ingresos',gastos:'Gastos',stats:'Estadísticas',cfg:'Ajustes'};
 const GTL={actual:'Actuales',futuro:'Futuros',recurrente:'Recurrentes'};
-const HELP={actual:'Ya pagados: se restan de lo libre.',futuro:'Por pagar: te digo cuánto apartar.',recurrente:'Se repiten cada mes. Poné el próximo pago.'};
+const HELP={actual:'Ya pagados: se restan de lo libre.',futuro:'Por pagar: te digo cuánto apartar.',recurrente:'Se repiten: elegí mensual o quincenal.'};
 function render(){
+  CY=null;
   const C=compute(),{now,qs,total,pend}=C;
   const cur=qs.find(x=>x.q===now);
   const nextC=s.cobros.filter(c=>c.fecha&&c.fecha>=ymd(new Date())).sort((a,b)=>a.fecha<b.fecha?-1:1)[0];
@@ -336,24 +410,28 @@ function render(){
     const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=x.inc>0?x.inc-x.sum-x.spent:null,ap=dn.reduce((a,i)=>a+i.part,0);
     return `<div class="q ${x.q===now?'now':''} ${all?'done':''}"><header><span>${qLabel(x.q)} ${x.q===now?'<span class="tag">ahora</span>':''}${x.inc||x.pend?'<span class="tag">cobro</span>':''}</span><span>${money(x.sum)}</span></header>
     ${!x.items.length?'<div class="small">Nada para apartar.</div>':''}
-    <ul>${x.items.map(i=>{const k=x.q+':'+i.id,ok=!!s.hechos[k];return `<li class="${ok?'ok':''}"><label><input type="checkbox" data-qi="${esc(k)}" ${ok?'checked':''} aria-label="Apartado: ${esc(i.g.desc)}"><span class="t">${esc(i.g.desc)} <small>vence ${fmtD(i.fecha)}</small>${i.g.rec?' <span class="tag">mensual</span>':''}${i.late?' <span class="tag">vence ya</span>':''}${i.nc?' <span class="tag">sin cobro previo</span>':''}</span></label><span class="t">${money(i.part)}</span></li>`}).join('')}</ul>
+    <ul>${x.items.map(i=>{const k=hkey(x.q,i),ok=!!s.hechos[k];return `<li class="${ok?'ok':''}"><label><input type="checkbox" data-qi="${esc(k)}" ${ok?'checked':''} aria-label="Apartado: ${esc(i.g.desc)}"><span class="t">${esc(i.g.desc)} <small>vence ${fmtD(i.fecha)}</small>${i.g.rec?' <span class="tag">'+(i.g.freq==='quincenal'?'quincenal':'mensual')+'</span>':''}${i.late?' <span class="tag">vence ya</span>':''}${i.nc?' <span class="tag">sin cobro previo</span>':''}</span></label><span class="t">${money(i.part)}</span></li>`}).join('')}</ul>
     ${x.spent>0?`<div class="small">Ya gastado: ${money(x.spent)}</div>`:''}${x.inc>0?`<div class="small">Cobro ${money(x.inc)} − a guardar ${money(x.sum)}${x.spent>0?' − gastado '+money(x.spent):''} = <b>${lib<0?'faltan '+money(-lib):'libre '+money(lib)}</b></div>`:x.pend?'<div class="small">Falta el monto del cobro.</div>':''}
     ${x.sum>0?`<div class="small">Apartado ${money(ap)} de ${money(x.sum)}</div><label style="margin-top:8px"><input type="checkbox" data-qa="${x.q}" ${all?'checked':''}> Marcar todo</label>`:''}</div>`}).join('');
-  const cs=[...s.cobros].sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
-  $('clist').innerHTML=cs.length?cs.map(c=>`<div class="row g5"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto" aria-label="Monto"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><select data-t="c" data-id="${esc(c.id)}" data-k="cat" aria-label="Categoría">${icatOpts(c.cat)}</select><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin ingresos todavía.</div>';
+  const cs=[...s.cobros].sort(byDate(ORD.c));
+  $('ctools').innerHTML=toolsHtml('c',cs);
+  $('clist').innerHTML=cs.length?(SELM.c?cs.map(x=>selRow(x,'c')).join(''):cs.map(c=>`<div class="row g5"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto" aria-label="Monto"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><select data-t="c" data-id="${esc(c.id)}" data-k="cat" aria-label="Categoría">${icatOpts(c.cat)}</select><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join('')):'<div class="empty">Sin ingresos todavía.</div>';
   $('icats').innerHTML=s.icats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dic="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   {const sc=$('ccat').value;$('ccat').innerHTML=icatOpts(sc)}
   $('cats').innerHTML=s.cats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dc="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   const sel=$('nc').value;$('nc').innerHTML=catOpts(sel);
-  const gl=s.gastos.filter(g=>g.tipo===GT);
+  const gl=s.gastos.filter(g=>g.tipo===GT).sort(byDate(ORD.g));
+  $('gtools').innerHTML=toolsHtml('g',gl);
+  $('nfq').classList.toggle('hide',GT!=='recurrente');$('ncw').classList.toggle('two',GT==='recurrente');
   $('gseg').innerHTML=Object.keys(GTL).map(k=>`<button data-gt="${k}" class="${k===GT?'on':''}">${GTL[k]} <small>${s.gastos.filter(g=>g.tipo===k).length}</small></button>`).join('');
   $('ghelp').textContent=HELP[GT];
-  $('glist-total').textContent=gl.length?(GT==='recurrente'?'Total por mes: ':GT==='actual'?'Total gastado: ':'Total por pagar: ')+money(gl.reduce((a,g)=>a+(g.monto>0?g.monto:0),0)):'';
-  $('list').innerHTML=gl.length?gl.map(g=>`<div class="row g5"><input data-t="g" data-id="${esc(g.id)}" data-k="desc" value="${esc(g.desc)}" aria-label="Concepto"><input data-t="g" data-id="${esc(g.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(g.monto)}" aria-label="Monto"><label class="dt"><span class="dtv${g.fecha?'':' ph'}">${g.fecha?fmtD(g.fecha):'Fecha'}</span><input data-t="g" data-id="${esc(g.id)}" data-k="fecha" type="date" value="${esc(g.fecha||'')}" aria-label="Fecha"></label><select data-t="g" data-id="${esc(g.id)}" data-k="cat" aria-label="Categoría">${catOpts(g.cat)}</select><button class="x" data-del="g" data-id="${esc(g.id)}" aria-label="Eliminar">×</button></div>`).join(''):'<div class="empty">Sin gastos acá.</div>';
+  $('glist-total').textContent=gl.length?gl.length+(gl.length===1?' gasto · ':' gastos · ')+(GT==='recurrente'?'Por mes: ':GT==='actual'?'Gastado: ':'Por pagar: ')+money(gl.reduce((a,g)=>a+(g.monto>0?g.monto*(g.rec&&g.freq==='quincenal'?2:1):0),0)):'';
+  $('list').innerHTML=gl.length?(SELM.g?gl.map(x=>selRow(x,'g')).join(''):gl.map(g=>`<div class="row g5"><input data-t="g" data-id="${esc(g.id)}" data-k="desc" value="${esc(g.desc)}" aria-label="Concepto"><input data-t="g" data-id="${esc(g.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(g.monto)}" aria-label="Monto"><label class="dt"><span class="dtv${g.fecha?'':' ph'}">${g.fecha?fmtD(g.fecha):'Fecha'}</span><input data-t="g" data-id="${esc(g.id)}" data-k="fecha" type="date" value="${esc(g.fecha||'')}" aria-label="Fecha"></label><div class="pair${g.rec?' two':''}"><select data-t="g" data-id="${esc(g.id)}" data-k="cat" aria-label="Categoría">${catOpts(g.cat)}</select>${g.rec?`<select data-t="g" data-id="${esc(g.id)}" data-k="freq" aria-label="Frecuencia"><option value="mensual"${g.freq==='quincenal'?'':' selected'}>Mensual</option><option value="quincenal"${g.freq==='quincenal'?' selected':''}>Quincenal</option></select>`:''}</div><button class="x" data-del="g" data-id="${esc(g.id)}" aria-label="Eliminar">×</button></div>`).join('')):'<div class="empty">Sin gastos acá.</div>';
   renderStats();refreshDT();
 }
-const pkey=(f,v)=>{const d=parseD(f);return v==='q'?qOf(d):d.getFullYear()*12+d.getMonth()};
-const plabel=(k,v)=>v==='q'?qLabel(k):MES[k%12]+' '+String(Math.floor(k/12)).slice(2);
+const dnum=f=>Math.round(parseD(f)/864e5);
+const pkey=(f,v)=>{const d=parseD(f);return v==='q'?dnum(cyc().st[qOf(d)]):d.getFullYear()*12+d.getMonth()};
+const plabel=(k,v)=>v==='q'?qLabel(Math.max(0,cyc().st.findIndex(f=>dnum(f)===k))):MES[k%12]+' '+String(Math.floor(k/12)).slice(2);
 document.addEventListener('change',e=>{if(e.target.id==='spsel'){SSEL=+e.target.value;render()}});
 function renderStats(){
   const el=$('stats'),v=SV,gs=[];
@@ -417,9 +495,10 @@ function setView(v){
 const find=(t,id)=>(t==='c'?s.cobros:s.gastos).find(x=>String(x.id)===id);
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.qi){if(t.checked)s.hechos[t.dataset.qi]=true;else delete s.hechos[t.dataset.qi];save();render()}
+  if(t.dataset.sel){const k=t.dataset.sel;if(t.checked)SELS[k].add(t.dataset.id);else SELS[k].delete(t.dataset.id);render()}
+  else if(t.dataset.qi){if(t.checked)s.hechos[t.dataset.qi]=true;else delete s.hechos[t.dataset.qi];save();render()}
   else if(t.dataset.qa){const x=compute().qs.find(x=>x.q===+t.dataset.qa);
-    if(x){x.items.forEach(i=>{const k=x.q+':'+i.id;if(t.checked)s.hechos[k]=true;else delete s.hechos[k]});save();render()}}
+    if(x){x.items.forEach(i=>{const k=hkey(x.q,i);if(t.checked)s.hechos[k]=true;else delete s.hechos[k]});save();render()}}
   else if(t.dataset.k){const o=find(t.dataset.t,t.dataset.id);if(!o)return;
     o[t.dataset.k]=t.dataset.k==='monto'?parseNum(t.value):t.value;save();render()}
 });
@@ -428,8 +507,20 @@ document.addEventListener('click',e=>{
   if(d){const a=d.dataset.del==='c'?s.cobros:s.gastos,i=a.findIndex(x=>String(x.id)===d.dataset.id);if(i>-1)a.splice(i,1);save();render()}
   const rc=e.target.closest('[data-rec]');
   if(rc){const g=s.gastos.find(x=>String(x.id)===rc.dataset.rec);if(g){g.rec=!g.rec;save();render()}}
+  const so=e.target.closest('[data-sort]');
+  if(so){const k=so.dataset.sort;ORD[k]=ORD[k]==='asc'?'desc':'asc';try{localStorage.setItem('orden-'+k,ORD[k])}catch(_){}render()}
+  const sm=e.target.closest('[data-selm]');
+  if(sm){SELM[sm.dataset.selm]=true;SELS[sm.dataset.selm].clear();render()}
+  const sd=e.target.closest('[data-seld]');
+  if(sd){SELM[sd.dataset.seld]=false;SELS[sd.dataset.seld].clear();render()}
+  const sa=e.target.closest('[data-sela]');
+  if(sa){const k=sa.dataset.sela,list=k==='g'?s.gastos.filter(g=>g.tipo===GT):s.cobros,all=list.length>0&&list.every(x=>SELS[k].has(String(x.id)));SELS[k].clear();if(!all)list.forEach(x=>SELS[k].add(String(x.id)));render()}
+  const bk=e.target.closest('[data-bulk]');
+  if(bk&&!bk.disabled){const k=bk.dataset.bulk,v=$('bulk-'+k).value,list=k==='g'?s.gastos:s.cobros;let n=0;
+    list.forEach(x=>{if(SELS[k].has(String(x.id))){x.cat=v;n++}});SELS[k].clear();save();render();
+    $(k==='g'?'gmsg':'cmsg').textContent='Categoría cambiada en '+n+(n===1?' registro.':' registros.')}
   const gt=e.target.closest('[data-gt]');
-  if(gt){GT=gt.dataset.gt;render()}
+  if(gt){GT=gt.dataset.gt;SELS.g.clear();render()}
   const svb=e.target.closest('[data-sv]');
   if(svb){SV=svb.dataset.sv;SSEL=null;render()}
   const dic=e.target.closest('[data-dic]');
@@ -446,8 +537,8 @@ $('nb').onclick=()=>{
   const d=$('nd').value.trim(),m=parseNum($('nm').value);let f=$('nf').value;
   if(!f&&GT==='actual')f=ymd(new Date());
   if(!d||!(m>0)||!f){$('gmsg').textContent='Completá concepto, monto y fecha.';return}
-  s.gastos.push({id:uid(),desc:d,monto:m,fecha:f,cat:$('nc').value,tipo:GT,rec:GT==='recurrente'});
-  $('nd').value=$('nm').value=$('nf').value='';$('gmsg').textContent='';save();render()};
+  s.gastos.push({id:uid(),desc:d,monto:m,fecha:f,cat:$('nc').value,tipo:GT,rec:GT==='recurrente',freq:GT==='recurrente'?$('nfq').value:'mensual'});
+  $('nd').value=$('nm').value=$('nf').value='';save();render();$('gmsg').textContent='Agregado ('+s.gastos.length+' en total).'};
 $('cab').onclick=()=>{
   const n=$('cn').value.trim();if(!n)return;
   if(s.cats.some(c=>c.name.toLowerCase()===n.toLowerCase())){$('gmsg').textContent='Esa categoría ya existe.';return}
@@ -485,11 +576,14 @@ function mkDate(d,m,y){
   const dt=new Date(y,m-1,d);if(dt.getMonth()!==m-1||dt.getDate()!==+d)return null;
   return dt.getFullYear()+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
 }
+let fmtImp='dmy';
+try{fmtImp=localStorage.getItem('imp-fmt')==='mdy'?'mdy':'dmy'}catch(e){}
+document.addEventListener('change',e=>{if(e.target.id==='impfmt'){fmtImp=e.target.value;try{localStorage.setItem('imp-fmt',fmtImp)}catch(_){}}});
 function parseCobros(lines){
   const out=[];
   lines.forEach(line=>{
     const ds=[];let rest=line;
-    for(const m of line.matchAll(DRE)){const f=m[1]?mkDate(+m[1],+m[2],m[3]):mkDate(+m[4],+m[5]);if(f){ds.push(f);rest=rest.replace(m[0],' ')}}
+    for(const m of line.matchAll(DRE)){const a=+(m[1]||m[4]),b=+(m[2]||m[5]),y=m[3];const f=fmtImp==='mdy'?mkDate(b,a,y):mkDate(a,b,y);if(f){ds.push(f);rest=rest.replace(m[0],' ')}}
     if(!ds.length)return;
     let monto=0,desc='';
     if(ds.length===1){
@@ -503,7 +597,7 @@ function parseCobros(lines){
 }
 function importLines(lines,done){
   const msg=$('cmsg'),found=parseCobros(lines).filter(c=>!s.cobros.some(x=>x.fecha===c.fecha));
-  if(!found.length){msg.textContent='No encontré fechas nuevas. Podés agregarlas a mano.';return}
+  if(!found.length){msg.textContent='No encontré fechas nuevas. Revisá el formato elegido.';return}
   s.cobros.push(...found);save();render();if(done)done();
   msg.textContent='Importé '+found.length+' fecha'+(found.length>1?'s':'')+' de cobro. Cuando cobres, completá el monto.';
 }
@@ -559,7 +653,7 @@ function status(){
   else if(dirty)el.innerHTML='<span class="dot pend"></span><span class="lbl">Sincronizando…</span>';
   else el.innerHTML='<span class="dot ok"></span><span class="lbl">Sincronizado</span>';
 }
-function save(){
+function save(){CY=null;
   s.u=Date.now()*1000+Math.floor(Math.random()*1000);
   persist();dirty=true;try{localStorage.setItem(KD,'1')}catch(e){}
   status();clearTimeout(pushT);pushT=setTimeout(push,800);
@@ -569,7 +663,7 @@ async function push(){
   const snap=s.u;
   for(let i=1;i<=3;i++){
     try{
-      const r=await fetch(u,{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+      const body=JSON.stringify(s),r=await fetch(u,{method:'PUT',keepalive:body.length<60000,headers:{'Content-Type':'application/json'},body});
       if(!r.ok)throw 0;
       syncErr=false;
       if(s.u===snap){dirty=false;try{localStorage.setItem(KD,'0')}catch(e){}}
@@ -582,10 +676,11 @@ const busy=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA)$/.te
 async function pull(){
   const u=url();if(!u||document.hidden)return;
   try{
-    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;
+    const u0=s.u,r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;
     syncErr=false;
     const rem=await r.json();
     if(rem==null||dirty){push();return}
+    if(s.u!==u0){push();return}
     if(rem.u!==s.u&&!busy()){
       s={...def(),phrase:s.phrase,...rem};norm();persist();render();
     }
@@ -637,6 +732,7 @@ $('res').addEventListener('toggle',()=>{try{localStorage.setItem('resumen-open',
   om.onchange=()=>{showMsg=om.checked;try{localStorage.setItem('ver-msg',showMsg?'1':'0')}catch(e){}render()};
   od.onchange=()=>{const dk=od.checked;document.documentElement.dataset.theme=dk?'dark':'light';try{localStorage.setItem('tema',dk?'oscuro':'claro')}catch(e){}};
 })();
+$('impfmt').value=fmtImp;
 render();startSync();
 </script>
 
