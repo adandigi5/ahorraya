@@ -42,7 +42,7 @@ h1{font-size:clamp(26px,7vw,36px);font-weight:800;letter-spacing:-1px;line-heigh
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .card{container-type:inline-size;color:#161616;position:relative;overflow:hidden;border-radius:var(--r);padding:16px;min-height:132px;min-width:0;overflow-wrap:anywhere}
 .card h3{font-size:13.5px;font-weight:700;line-height:1.2}
-.big{white-space:nowrap;overflow-wrap:normal;font-size:22px;font-weight:800;letter-spacing:-1px;margin-top:12px;line-height:1.1}
+.big{white-space:nowrap;overflow-wrap:normal;font-size:min(22px,var(--f,22px));font-weight:800;letter-spacing:-1px;margin-top:12px;line-height:1.1}
 .small{font-size:12.5px;margin-top:6px;line-height:1.35;position:relative}
 .card>*{position:relative;z-index:1}
 .y{background:var(--yel)}.p{background:var(--pink)}.g{background:var(--grn)}.b{background:var(--blu)}
@@ -84,7 +84,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
  .g4>:nth-child(1){grid-area:f}.g4>:nth-child(2){grid-area:m}.g4>:nth-child(3){grid-area:d}.g4>:nth-child(4){grid-area:x}
  .row{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:8px}
  .row .x{width:44px}
- .grid{grid-template-columns:1fr 1fr;gap:8px}.card{padding:12px;min-height:0;border-radius:16px}.card h3{font-size:12.5px;line-height:1.2}.big{font-size:20px;margin-top:8px;letter-spacing:-.4px}.small{font-size:11px;line-height:1.3}.card::after{width:48px;height:48px;right:-12px;bottom:-12px}
+ .grid{grid-template-columns:1fr 1fr;gap:6px}.card{padding:8px 10px;min-height:0;border-radius:14px}.card h3{font-size:11.5px;line-height:1.2}
+ .big{font-size:min(17px,var(--f,17px));margin-top:2px;letter-spacing:-.3px}.small{font-size:10.5px;line-height:1.25;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.card::after{display:none}
+ h1{margin-bottom:6px}.agent{padding:10px 12px;font-size:13.5px;margin-bottom:8px}.res{margin-bottom:8px}.res>summary,.pd>summary{min-height:38px}
+ .q{padding:10px 12px}.q li{padding:5px 0}
  .panel{padding:12px}.mrow{grid-template-columns:76px 1fr}.mrow b{grid-column:2}
 }
 .seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--soft);border-radius:22px;padding:4px;margin-bottom:10px}
@@ -182,8 +185,10 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
         <select id="ccat" aria-label="Categoría"></select>
         <button id="cb" type="button">Agregar</button>
       </div>
-      <div class="tools" id="ctools"></div>
-      <div id="clist"></div>
+      <details class="pd" id="dc" open><summary id="dcs">Ingresos cargados</summary>
+        <div class="tools" id="ctools"></div>
+        <div id="clist"></div>
+      </details>
       <details class="imp"><summary>Categorías</summary>
         <div class="chips" id="icats"></div>
         <div class="add g2"><input id="icn" placeholder="Nueva categoría" aria-label="Nueva categoría de ingresos" maxlength="30"><button id="icab" type="button" class="ghost">Crear</button></div>
@@ -211,8 +216,10 @@ dialog p{color:var(--mut);font-size:13px;line-height:1.45}
         <button id="nb" type="button">Agregar</button>
       </div>
       <div id="glist-total" class="msg"></div>
-      <div class="tools" id="gtools"></div>
-      <div id="list"></div>
+      <details class="pd" id="dg" open><summary id="dgs">Gastos cargados</summary>
+        <div class="tools" id="gtools"></div>
+        <div id="list"></div>
+      </details>
       <details class="imp"><summary>Categorías</summary>
         <div class="chips" id="cats"></div>
         <div class="add g2"><input id="cn" placeholder="Nueva categoría" aria-label="Nueva categoría" maxlength="30"><button id="cab" type="button" class="ghost">Crear</button></div>
@@ -332,16 +339,19 @@ function compute(){
   const Cq=new Set(sal().filter(c=>c.fecha).map(c=>qOf(parseD(c.fecha))).filter(q=>q>=now));
   const get=q=>map[q]=map[q]||{q,items:[],sum:0,inc:0,pend:0,spent:0};
   Cq.forEach(get);
-  sal().forEach(c=>{if(!c.fecha)return;const q=qOf(parseD(c.fecha));if(q<now)return;
+  const sd=sal().filter(c=>c.fecha).map(c=>c.fecha).sort(),a0=sd.length?qOf(sd[0]):null,hist={},histInc={};
+  sal().forEach(c=>{if(!c.fecha)return;const q=qOf(parseD(c.fecha));
+    if(q<now){if(a0!=null&&q>=a0&&c.monto>0)histInc[q]=(histInc[q]||0)+c.monto;return}
     if(c.monto>0)get(q).inc+=c.monto;else get(q).pend++});
   const todayS=ymd(new Date()),fut=sal().filter(c=>c.fecha&&c.fecha>=todayS).map(c=>c.fecha).sort();
   let total=0,pend=0;
   s.gastos.forEach(g=>{
     if(!g.fecha||!(g.monto>0))return;
-    if(g.tipo==='actual'){const q=qOf(parseD(g.fecha));if(q>=now)get(q).spent+=g.monto;return}
+    if(g.tipo==='actual'){const q=qOf(parseD(g.fecha));if(q>=now)get(q).spent+=g.monto;else if(a0!=null&&q>=a0)hist[q]=(hist[q]||0)+g.monto;return}
     pend++;
     occs(g).forEach(o=>{
       const due=qOf(parseD(o.fecha));
+      if(a0!=null&&due<now&&due>=a0){hist[due]=(hist[due]||0)+g.monto;return}
       if(g.rec&&due<now)return;
       total+=g.monto;
       if(fut.length){
@@ -357,13 +367,16 @@ function compute(){
       cand.forEach(q=>{const m=get(q);m.items.push({id:o.id,g,fecha:o.fecha,part:g.monto/cand.length,late:due<=now,nc});m.sum+=g.monto/cand.length});
     });
   });
+  for(let i=0;i<3;i++)get(now+i);
+  let run=0;if(a0!=null)for(let k=a0;k<now;k++)run+=(histInc[k]||0)-(hist[k]||0);
   const qs=Object.values(map).sort((a,b)=>a.q-b.q);
+  qs.forEach(m=>{if(m.q>=now){m.saldo=run;m.disp=m.inc+run;m.libre=m.disp-m.sum-m.spent;run=m.libre}});
   return {now,qs,total,pend,hasCobros:Cq.size>0};
 }
 function byCat(items){const m={};items.forEach(i=>{const k=i.g.cat||'';m[k]=(m[k]||0)+i.part});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 const hkey=(q,i)=>cyc().st[q]+':'+i.id;
 const isDone=(q,i)=>!!s.hechos[hkey(q,i)];
-const bigH=x=>`<div class="big" style="font-size:min(22px,${(100/(x.length*.58+.5)).toFixed(1)}cqw)">${x}</div>`;
+const bigH=x=>`<div class="big" style="--f:${(100/(x.length*.58+.5)).toFixed(1)}cqw">${x}</div>`;
 const chip=(k,v)=>{const c=catOf(k);return `<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)} ${money(v)}</span>`};
 
 /* ---------- Render ---------- */
@@ -401,31 +414,31 @@ function render(){
   $('agent').innerHTML=ag;$('agent').classList.toggle('hide',!showMsg||CV==='cfg');
   const hoyS=ymd(new Date()),vs=sal().filter(c=>c.fecha&&c.fecha<=hoyS),vd=vs.length?vs.map(c=>c.fecha).sort().pop():null;
   const vigInc=vs.filter(c=>c.fecha===vd).reduce((a,c)=>a+(c.monto>0?c.monto:0),0);
-  const libre=vigInc>0?vigInc-(cur?cur.sum:0)-(cur?cur.spent:0):null;
+  const libre=cur&&(cur.inc>0||cur.saldo!==0)?cur.libre:null;
   const cI=cur?cur.items:[],cD=cI.filter(x=>isDone(now,x)),cRem=cI.filter(x=>!isDone(now,x)).reduce((a,x)=>a+x.part,0);
   const cAll=sal().filter(c=>c.fecha).sort((a,b)=>a.fecha<b.fecha?-1:1),lastC=cAll[cAll.length-1];
   const apart=cD.reduce((a,x)=>a+x.part,0),inc=cur?cur.inc:0;
   $('cards').innerHTML=
    `<div class="card y"><h3>Sueldo</h3>${bigH(vigInc>0?money(vigInc):'—')}<div class="small">${vd?(vigInc>0?'Desde '+fmtD(vd):'Falta cargar el monto'):'Sin cobro'}</div></div>`+
    `<div class="card p"><h3>Por cubrir</h3>${bigH(money(cRem))}<div class="small">${cI.length?(cRem===0?'Todo cubierto':'Apartado '+money(apart)+' de '+money(cur.sum)):'Sin gastos en esta quincena'}</div></div>`+
-   `<div class="card g"><h3>Libre</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur&&cur.spent>0?'Sueldo − guardar − gastado':'Sueldo − a guardar')}</div></div>`+
+   `<div class="card g"><h3>Libre</h3>${bigH(libre==null?'—':money(libre))}<div class="small">${libre==null?'Falta cargar el sueldo':libre<0?'No alcanza':(cur.saldo!==0?'Incluye saldo '+money(cur.saldo):'Sueldo − a guardar')}</div></div>`+
    `<div class="card b"><h3>Último cobro</h3>${bigH(lastC?fmtD(lastC.fecha):'—')}<div class="small">${lastC?(!nextC?'Ya pasó':nextC===lastC?'También el próximo':'Próximo: '+fmtD(nextC.fecha)):'Sin cobros'}</div></div>`;
-  $('plan').innerHTML=[0,1,2].map(i=>qs.find(x=>x.q===now+i)||{q:now+i,items:[],sum:0,inc:0,pend:0,spent:0}).map(x=>{
-    const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=x.inc>0?x.inc-x.sum-x.spent:null,ap=dn.reduce((a,i)=>a+i.part,0);
+  $('plan').innerHTML=[0,1,2].map(i=>qs.find(x=>x.q===now+i)||{q:now+i,items:[],sum:0,inc:0,pend:0,spent:0,saldo:0,disp:0,libre:0}).map(x=>{
+    const dn=x.items.filter(i=>isDone(x.q,i)),all=x.items.length>0&&dn.length===x.items.length,lib=(x.inc>0||x.saldo!==0)?x.libre:null,ap=dn.reduce((a,i)=>a+i.part,0);
     return `<div class="q ${x.q===now?'now':''} ${all?'done':''}"><header><span>${qLabel(x.q)} ${x.q===now?'<span class="tag">ahora</span>':''}${x.inc||x.pend?'<span class="tag">cobro</span>':''}</span><span>${money(x.sum)}</span></header>
     ${!x.items.length?'<div class="small">Nada para apartar.</div>':''}
     <ul>${x.items.map(i=>{const k=hkey(x.q,i),ok=!!s.hechos[k];return `<li class="${ok?'ok':''}"><label><input type="checkbox" data-qi="${esc(k)}" ${ok?'checked':''} aria-label="Apartado: ${esc(i.g.desc)}"><span class="t">${esc(i.g.desc)} <small>vence ${fmtD(i.fecha)}</small>${i.g.rec?' <span class="tag">'+(i.g.freq==='quincenal'?'quincenal':'mensual')+'</span>':''}${i.late?' <span class="tag">vence ya</span>':''}${i.nc?' <span class="tag">sin cobro previo</span>':''}</span></label><span class="t">${money(i.part)}</span></li>`}).join('')}</ul>
-    ${x.spent>0?`<div class="small">Ya gastado: ${money(x.spent)}</div>`:''}${x.inc>0?`<div class="small">Cobro ${money(x.inc)} − a guardar ${money(x.sum)}${x.spent>0?' − gastado '+money(x.spent):''} = <b>${lib<0?'faltan '+money(-lib):'libre '+money(lib)}</b></div>`:x.pend?'<div class="small">Falta el monto del cobro.</div>':''}
+    ${x.spent>0?`<div class="small">Ya gastado: ${money(x.spent)}</div>`:''}${lib!=null?`<div class="small">Disponible ${money(x.disp)}${x.saldo!==0?' (cobro '+money(x.inc)+' + saldo '+money(x.saldo)+')':''} − a guardar ${money(x.sum)}${x.spent>0?' − gastado '+money(x.spent):''} = <b>${lib<0?'faltan '+money(-lib):'libre '+money(lib)}</b></div>`:x.pend?'<div class="small">Falta el monto del cobro.</div>':''}
     ${x.sum>0?`<div class="small">Apartado ${money(ap)} de ${money(x.sum)}</div><label style="margin-top:8px"><input type="checkbox" data-qa="${x.q}" ${all?'checked':''}> Marcar todo</label>`:''}</div>`}).join('');
   const cs=[...s.cobros].sort(byDate(ORD.c));
-  $('ctools').innerHTML=toolsHtml('c',cs);
+  $('ctools').innerHTML=toolsHtml('c',cs);$('dcs').textContent='Ingresos cargados ('+cs.length+')';
   $('clist').innerHTML=cs.length?(SELM.c?cs.map(x=>selRow(x,'c')).join(''):cs.map(c=>`<div class="row g5"><input data-t="c" data-id="${esc(c.id)}" data-k="desc" value="${esc(c.desc||'')}" placeholder="Concepto" aria-label="Concepto"><input data-t="c" data-id="${esc(c.id)}" data-k="monto" type="text" inputmode="decimal" data-num autocomplete="off" value="${fnum(c.monto)}" placeholder="Monto" aria-label="Monto"><label class="dt"><span class="dtv${c.fecha?'':' ph'}">${c.fecha?fmtD(c.fecha):'Fecha'}</span><input data-t="c" data-id="${esc(c.id)}" data-k="fecha" type="date" value="${esc(c.fecha||'')}" aria-label="Fecha"></label><select data-t="c" data-id="${esc(c.id)}" data-k="cat" aria-label="Categoría">${icatOpts(c.cat)}</select><button class="x" data-del="c" data-id="${esc(c.id)}" aria-label="Eliminar">×</button></div>`).join('')):'<div class="empty">Sin ingresos todavía.</div>';
   $('icats').innerHTML=s.icats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dic="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   {const sc=$('ccat').options.length?$('ccat').value:'i1';$('ccat').innerHTML=icatOpts(sc)}
   $('cats').innerHTML=s.cats.map(c=>`<span class="chip"><i class="sw" style="background:${c.color}"></i>${esc(c.name)}<button class="x" data-dc="${esc(c.id)}" aria-label="Eliminar categoría ${esc(c.name)}">×</button></span>`).join('')||'<span class="msg">Sin categorías. Creá una abajo.</span>';
   const sel=$('nc').value;$('nc').innerHTML=catOpts(sel);
   const gl=s.gastos.filter(g=>g.tipo===GT).sort(byDate(ORD.g));
-  $('gtools').innerHTML=toolsHtml('g',gl);
+  $('gtools').innerHTML=toolsHtml('g',gl);$('dgs').textContent='Gastos cargados ('+gl.length+')';
   $('nfq').classList.toggle('hide',GT!=='recurrente');$('ncw').classList.toggle('two',GT==='recurrente');
   $('gseg').innerHTML=Object.keys(GTL).map(k=>`<button data-gt="${k}" class="${k===GT?'on':''}">${GTL[k]} <small>${s.gastos.filter(g=>g.tipo===k).length}</small></button>`).join('');
   $('ghelp').textContent=HELP[GT];
@@ -725,6 +738,7 @@ $('cs').onclick=async()=>{
 
 s.phrase=CLOUD_CODE;
 try{$('res').open=localStorage.getItem('resumen-open')!=='0';$('pd').open=localStorage.getItem('plan-open')!=='0'}catch(e){}
+[['dc','open-c'],['dg','open-g']].forEach(([id,k])=>{try{$(id).open=localStorage.getItem(k)!=='0'}catch(e){}$(id).addEventListener('toggle',()=>{try{localStorage.setItem(k,$(id).open?'1':'0')}catch(e){}})});
 $('pd').addEventListener('toggle',()=>{try{localStorage.setItem('plan-open',$('pd').open?'1':'0')}catch(e){}});
 (function(){let m;try{m=localStorage.getItem('nav-min')}catch(e){}
   $('app').classList.toggle('min',m==null?innerWidth<700:m==='1');
